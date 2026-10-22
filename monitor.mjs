@@ -29,7 +29,8 @@ try {
   for (const location of locations) {
     const page = await context.newPage();
     try {
-      await page.goto(`https://www.facebook.com/marketplace/${location}/search/?query=ps5&maxPrice=3200&sortBy=creation_time_descend`, {waitUntil:'domcontentloaded',timeout:60000});
+      const response = await page.goto(`https://www.facebook.com/marketplace/${location}/search/?query=ps5&maxPrice=3200&sortBy=creation_time_descend`, {waitUntil:'domcontentloaded',timeout:60000});
+      console.log(`${location}: HTTP ${response?.status()}; página: ${await page.title()}`);
       const close = page.getByRole('button',{name:'Fechar',exact:true});
       try { await close.click({timeout:5000}); } catch {}
       await page.locator('a[href*="/marketplace/item/"]').first().waitFor({timeout:30000});
@@ -67,10 +68,12 @@ try {
         fs.mkdirSync('state',{recursive:true});
         fs.writeFileSync(statePath,JSON.stringify(state,null,2));
       }
-    } catch {
+    } catch (error) {
       failures++;
       console.error(`${location}: não foi possível validar a busca. Login, bloqueio, URL ou formato da página podem ter mudado. Nenhum bloqueio será contornado.`);
+      console.error(String(error.message).split('\n').slice(0,3).join(' ').slice(0,400));
     } finally { await page.close(); }
   }
 } finally { await browser.close(); }
 if (failures) process.exitCode = 1;
+
