@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import {parseListing} from './filter.mjs';
 
 // Nenhum token deve ser escrito em arquivos versionados ou logs.
-const token = process.env.TELEGRAM_BOT_TOKEN;
+const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
 let chat = process.env.TELEGRAM_CHAT_ID;
 const dryRun = process.env.DRY_RUN !== 'false';
 const statePath = 'state/seen.json';
@@ -22,12 +22,13 @@ if (process.env.TEST_TELEGRAM === 'true') {
   if (!chat) {
     if (!token) throw new Error('Configure TELEGRAM_BOT_TOKEN nos Secrets.');
     async function telegramRead(method) {
+      let response;
       try {
-        const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {signal:AbortSignal.timeout(20000)});
-        const result = await response.json();
-        if (!response.ok || !result.ok) throw new Error();
-        return result.result;
-      } catch { throw new Error('Telegram recusou a consulta. Confira o token nos Secrets.'); }
+        response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {signal:AbortSignal.timeout(20000)});
+      } catch { throw new Error('Não foi possível conectar ao Telegram.'); }
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(`Telegram recusou a consulta: HTTP ${response.status}. Confira o token nos Secrets.`);
+      return result.result;
     }
     const me = await telegramRead('getMe');
     if (me.username !== 'catiraudia_ps5_bot') throw new Error('O token não corresponde ao bot catiraudia_ps5_bot.');
