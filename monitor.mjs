@@ -56,7 +56,14 @@ try {
       const response = await page.goto(`https://www.facebook.com/marketplace/${location}/search/?query=ps5&maxPrice=3200&sortBy=creation_time_descend`, {waitUntil:'domcontentloaded',timeout:60000});
       console.log(`${location}: HTTP ${response?.status()}; página: ${await page.title()}`);
       const close = page.getByRole('button',{name:/^(Fechar|Close)$/});
-      try { await close.click({timeout:5000}); } catch {}
+      const cardsLocator = page.locator('a[href*="/marketplace/item/"]');
+      try {
+        await Promise.race([
+          close.waitFor({state:'visible',timeout:30000}),
+          cardsLocator.first().waitFor({state:'visible',timeout:30000})
+        ]);
+        if (await close.isVisible()) await close.click({timeout:5000});
+      } catch {}
       await page.locator('a[href*="/marketplace/item/"]').first().waitFor({timeout:30000});
       const cards = await page.locator('a[href*="/marketplace/item/"]').evaluateAll(links => links.map(a => ({url:a.href,text:a.getAttribute('aria-label') || a.innerText})));
       const found = new Map();
@@ -96,6 +103,10 @@ try {
       failures++;
       console.error(`${location}: não foi possível validar a busca. Login, bloqueio, URL ou formato da página podem ter mudado. Nenhum bloqueio será contornado.`);
       console.error(String(error.message).split('\n').slice(0,3).join(' ').slice(0,400));
+      try {
+        console.log(JSON.stringify({location,loginFieldVisible:await page.locator('input[type="password"]').first().isVisible(),closeButtonVisible:await page.getByRole('button',{name:/^(Fechar|Close)$/}).first().isVisible(),listingLinks:await page.locator('a[href*="/marketplace/item/"]').count()}));
+      } catch {}
+      if (dryRun) break;
     } finally { await page.close(); }
   }
 } finally { await browser.close(); }
