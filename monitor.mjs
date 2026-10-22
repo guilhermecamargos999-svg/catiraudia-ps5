@@ -46,7 +46,7 @@ if (process.env.TEST_TELEGRAM === 'true') {
   console.log('Telegram aceitou a mensagem de teste. Nenhum token, mensagem recebida ou identificador de conversa foi registrado nos logs.');
   process.exit(0);
 }
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.BROWSER_CHANNEL ? {channel:process.env.BROWSER_CHANNEL} : {});
 let failures = 0;
 try {
   const context = await browser.newContext({locale:'pt-BR'});
