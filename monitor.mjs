@@ -31,7 +31,7 @@ try {
     try {
       const response = await page.goto(`https://www.facebook.com/marketplace/${location}/search/?query=ps5&maxPrice=3200&sortBy=creation_time_descend`, {waitUntil:'domcontentloaded',timeout:60000});
       console.log(`${location}: HTTP ${response?.status()}; página: ${await page.title()}`);
-      const close = page.getByRole('button',{name:'Fechar',exact:true});
+      const close = page.getByRole('button',{name:/^(Fechar|Close)$/});
       try { await close.click({timeout:5000}); } catch {}
       await page.locator('a[href*="/marketplace/item/"]').first().waitFor({timeout:30000});
       const cards = await page.locator('a[href*="/marketplace/item/"]').evaluateAll(links => links.map(a => ({url:a.href,text:a.getAttribute('aria-label') || a.innerText})));
