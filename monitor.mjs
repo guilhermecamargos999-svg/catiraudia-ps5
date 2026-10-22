@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import {parseListing} from './filter.mjs';
 
 // Nenhum token deve ser escrito em arquivos versionados ou logs.
-const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+const token = process.env.TELEGRAM_BOT_TOKEN?.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
 let chat = process.env.TELEGRAM_CHAT_ID;
 const dryRun = process.env.DRY_RUN !== 'false';
 const statePath = 'state/seen.json';
@@ -21,6 +21,9 @@ async function send(text) {
 if (process.env.TEST_TELEGRAM === 'true') {
   if (!chat) {
     if (!token) throw new Error('Configure TELEGRAM_BOT_TOKEN nos Secrets.');
+    if (!/^\d{8,12}:[A-Za-z0-9_-]{35}$/.test(token)) {
+      throw new Error('O segredo salvo não tem o formato completo de token do Telegram (números, dois-pontos e código). Nenhuma credencial foi exibida.');
+    }
     async function telegramRead(method) {
       let response;
       try {
