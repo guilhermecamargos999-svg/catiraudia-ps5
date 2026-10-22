@@ -27,6 +27,7 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm test
       - run: npx playwright install --with-deps chromium
+        if: inputs.mode != 'telegram'
       - name: Executar
         run: node monitor.mjs
         env:
@@ -47,3 +48,4 @@ jobs:
               git push
             fi
           fi
+
