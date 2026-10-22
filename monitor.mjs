@@ -4,7 +4,7 @@ import {parseListing} from './filter.mjs';
 
 // Nenhum token deve ser escrito em arquivos versionados ou logs.
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const chat = process.env.TELEGRAM_CHAT_ID;
+let chat = process.env.TELEGRAM_CHAT_ID;
 const dryRun = process.env.DRY_RUN !== 'false';
 const statePath = 'state/seen.json';
 const state = fs.existsSync(statePath) ? JSON.parse(fs.readFileSync(statePath, 'utf8')) : {cities: {}};
@@ -19,7 +19,27 @@ async function send(text) {
   if (!response.ok || !result.ok) throw new Error('Telegram recusou o envio. Verifique os secrets e o Start no bot.');
 }
 if (process.env.TEST_TELEGRAM === 'true') {
-  await send('🎮 Catiraudia: conexão com Telegram funcionando. Monitor do Facebook ainda em teste.');
+  if (!chat) {
+    if (!token) throw new Error('Configure TELEGRAM_BOT_TOKEN nos Secrets.');
+    async function telegramRead(method) {
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {signal:AbortSignal.timeout(20000)});
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error();
+        return result.result;
+      } catch { throw new Error('Telegram recusou a consulta. Confira o token nos Secrets.'); }
+    }
+    const me = await telegramRead('getMe');
+    if (me.username !== 'catiraudia_ps5_bot') throw new Error('O token não corresponde ao bot catiraudia_ps5_bot.');
+    const updates = await telegramRead('getUpdates?limit=100&allowed_updates=%5B%22message%22%5D');
+    const ids = [...new Set(updates.filter(u=>u.message?.text === '/start' && u.message.chat.type === 'private').map(u=>u.message.chat.id))];
+    if (ids.length !== 1) throw new Error('Não foi possível identificar uma única conversa com /start. Envie /start ao bot novamente. Nenhuma mensagem foi enviada.');
+    chat = ids[0];
+    await send(`🎮 Catiraudia: teste do Telegram funcionando!\nSeu CHAT_ID: ${chat}\nSalve esse número como TELEGRAM_CHAT_ID nos Secrets do repositório catiraudia-ps5.\nO monitor do Facebook continua desligado: a leitura de anúncios na nuvem ainda não foi validada.`);
+  } else {
+    await send('🎮 Catiraudia: conexão com Telegram funcionando. Monitor do Facebook ainda em teste.');
+  }
+  console.log('Telegram aceitou a mensagem de teste. Nenhum token, mensagem recebida ou identificador de conversa foi registrado nos logs.');
   process.exit(0);
 }
 const browser = await chromium.launch();
